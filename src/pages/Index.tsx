@@ -9,9 +9,74 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { toast } from "@/hooks/use-toast";
 import Icon from "@/components/ui/icon";
+import { useState } from "react";
 
 const Index = () => {
+  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const addToCart = (game: any) => {
+    setCartItems((prev) => {
+      const existingItem = prev.find((item) => item.id === game.id);
+      if (existingItem) {
+        toast({
+          title: "Игра уже в корзине",
+          description: `${game.title} уже добавлена в корзину`,
+        });
+        return prev;
+      }
+      toast({
+        title: "Добавлено в корзину",
+        description: `${game.title} добавлена в корзину`,
+      });
+      return [...prev, game];
+    });
+  };
+
+  const removeFromCart = (gameId: number) => {
+    setCartItems((prev) => prev.filter((item) => item.id !== gameId));
+    toast({
+      title: "Удалено из корзины",
+      description: "Игра удалена из корзины",
+    });
+  };
+
+  const getTotalPrice = () => {
+    return cartItems.reduce((total, item) => {
+      const price = parseInt(item.price.replace(/[^\d]/g, ""));
+      return total + price;
+    }, 0);
+  };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    if (term) {
+      toast({
+        title: "Поиск",
+        description: `Ищем игры по запросу: ${term}`,
+      });
+    }
+  };
   const featuredGames = [
     {
       id: 1,
@@ -102,6 +167,8 @@ const Index = () => {
               <div className="relative hidden md:block">
                 <Input
                   placeholder="Поиск игр..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
                   className="w-64 bg-gaming-navy border-gray-700 text-white placeholder-gray-400"
                 />
                 <Icon
@@ -109,17 +176,142 @@ const Index = () => {
                   className="absolute right-3 top-3 h-4 w-4 text-gray-400"
                 />
               </div>
-              <Button
-                variant="outline"
-                className="border-gaming-orange text-gaming-orange hover:bg-gaming-orange hover:text-white"
-              >
-                <Icon name="User" className="h-4 w-4 mr-2" />
-                Войти
-              </Button>
-              <Button className="bg-gaming-orange hover:bg-orange-600">
-                <Icon name="ShoppingCart" className="h-4 w-4 mr-2" />
-                Корзина
-              </Button>
+
+              <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border-gaming-orange text-gaming-orange hover:bg-gaming-orange hover:text-white"
+                  >
+                    <Icon name="User" className="h-4 w-4 mr-2" />
+                    Войти
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-gaming-gray border-gray-700">
+                  <DialogHeader>
+                    <DialogTitle className="text-white">
+                      Вход в аккаунт
+                    </DialogTitle>
+                    <DialogDescription className="text-gray-400">
+                      Войдите в свой аккаунт для покупки игр
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <Input
+                      placeholder="Email"
+                      className="bg-gaming-navy border-gray-700 text-white"
+                    />
+                    <Input
+                      type="password"
+                      placeholder="Пароль"
+                      className="bg-gaming-navy border-gray-700 text-white"
+                    />
+                    <Button
+                      className="w-full bg-gaming-orange hover:bg-orange-600"
+                      onClick={() => {
+                        toast({
+                          title: "Вход выполнен",
+                          description: "Добро пожаловать в GameHub!",
+                        });
+                        setIsLoginOpen(false);
+                      }}
+                    >
+                      Войти
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
+                <SheetTrigger asChild>
+                  <Button className="bg-gaming-orange hover:bg-orange-600 relative">
+                    <Icon name="ShoppingCart" className="h-4 w-4 mr-2" />
+                    Корзина
+                    {cartItems.length > 0 && (
+                      <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {cartItems.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="bg-gaming-gray border-gray-700 w-full sm:max-w-lg">
+                  <SheetHeader>
+                    <SheetTitle className="text-white">Корзина</SheetTitle>
+                    <SheetDescription className="text-gray-400">
+                      {cartItems.length === 0
+                        ? "Корзина пуста"
+                        : `${cartItems.length} товаров в корзине`}
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="py-4">
+                    {cartItems.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Icon
+                          name="ShoppingCart"
+                          className="h-12 w-12 text-gray-600 mx-auto mb-4"
+                        />
+                        <p className="text-gray-400">Корзина пуста</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-4 mb-6">
+                          {cartItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between p-3 bg-gaming-navy rounded-lg"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <img
+                                  src={item.image}
+                                  alt={item.title}
+                                  className="w-12 h-12 rounded object-cover"
+                                />
+                                <div>
+                                  <p className="text-white font-medium text-sm">
+                                    {item.title}
+                                  </p>
+                                  <p className="text-gaming-orange font-bold">
+                                    {item.price}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeFromCart(item.id)}
+                                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                              >
+                                <Icon name="Trash2" className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="border-t border-gray-700 pt-4">
+                          <div className="flex justify-between items-center mb-4">
+                            <span className="text-white font-bold">Итого:</span>
+                            <span className="text-gaming-orange font-bold text-xl">
+                              {getTotalPrice().toLocaleString()}₽
+                            </span>
+                          </div>
+                          <Button
+                            className="w-full bg-gaming-orange hover:bg-orange-600"
+                            onClick={() => {
+                              toast({
+                                title: "Покупка оформлена!",
+                                description: `Заказ на сумму ${getTotalPrice().toLocaleString()}₽ оформлен. Ключи отправлены на email.`,
+                              });
+                              setCartItems([]);
+                              setIsCartOpen(false);
+                            }}
+                          >
+                            Оформить заказ
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </div>
@@ -142,6 +334,11 @@ const Index = () => {
               <Button
                 size="lg"
                 className="bg-gaming-orange hover:bg-orange-600 text-white"
+                onClick={() => {
+                  document
+                    .getElementById("featured-games")
+                    ?.scrollIntoView({ behavior: "smooth" });
+                }}
               >
                 <Icon name="Gamepad2" className="h-5 w-5 mr-2" />
                 Смотреть каталог
@@ -150,6 +347,13 @@ const Index = () => {
                 size="lg"
                 variant="outline"
                 className="border-white text-white hover:bg-white hover:text-gaming-navy"
+                onClick={() => {
+                  toast({
+                    title: "Как это работает",
+                    description:
+                      "1. Выберите игру 2. Добавьте в корзину 3. Оплатите 4. Получите ключ на email!",
+                  });
+                }}
               >
                 <Icon name="Play" className="h-5 w-5 mr-2" />
                 Как это работает
@@ -167,7 +371,7 @@ const Index = () => {
       </section>
 
       {/* Featured Games */}
-      <section className="py-16 bg-gaming-navy">
+      <section id="featured-games" className="py-16 bg-gaming-navy">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-3xl font-bold text-white">
@@ -176,6 +380,12 @@ const Index = () => {
             <Button
               variant="outline"
               className="border-gaming-orange text-gaming-orange hover:bg-gaming-orange hover:text-white"
+              onClick={() => {
+                toast({
+                  title: "Каталог игр",
+                  description: "Показываем весь каталог из 10,000+ игр",
+                });
+              }}
             >
               Смотреть все
               <Icon name="ArrowRight" className="h-4 w-4 ml-2" />
@@ -235,7 +445,10 @@ const Index = () => {
                 </CardContent>
 
                 <CardFooter className="pt-2">
-                  <Button className="w-full bg-gaming-orange hover:bg-orange-600">
+                  <Button
+                    className="w-full bg-gaming-orange hover:bg-orange-600"
+                    onClick={() => addToCart(game)}
+                  >
                     <Icon name="ShoppingCart" className="h-4 w-4 mr-2" />В
                     корзину
                   </Button>
